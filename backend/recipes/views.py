@@ -6,7 +6,6 @@ from .models import Category, Recipe, RecipeIngredient
 from .serializers import (
     CategorySerializer,
     RecipeDetailSerializer,
-    RecipeListSerializer,
 )
 
 
@@ -46,6 +45,6 @@ class RecipeViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     def get_serializer_class(self):
-        if self.action == "retrieve":
-            return RecipeDetailSerializer
-        return RecipeListSerializer
+        # Каталог сразу получает полные рецепты: так веб-приложение и будущий
+        # мобильный клиент могут собрать меню без отдельного запроса на каждое блюдо.
+        return RecipeDetailSerializer

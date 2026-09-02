@@ -3,7 +3,10 @@ import type { Recipe } from '@olivier/core'
 export const olivierRecipe: Recipe = {
   id: 'olivier', title: 'Классический Оливье', slug: 'olivier',
   summary: 'Тот самый праздничный салат — с точным расчётом на компанию.',
+  description: 'Домашний Оливье с варёной колбасой, солёными огурцами и зелёным горошком.',
+  category: { name: 'Салаты', slug: 'salads' },
   baseServings: 4, totalMinutes: 60, difficulty: 'easy',
+  isVegetarian: false, imageUrl: '', videoUrl: '',
   ingredients: [
     { id: 'potato', name: 'Картофель', quantity: 400, unit: 'g', section: 'vegetables', sectionLabel: 'Овощи' },
     { id: 'carrot', name: 'Морковь', quantity: 180, unit: 'g', section: 'vegetables', sectionLabel: 'Овощи' },
