@@ -1,0 +1,16 @@
+{
+  "name": "olivier-menu",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @olivier/web",
+    "build:web": "npm run build --workspace @olivier/web",
+    "lint:web": "npm run lint --workspace @olivier/web"
+  },
+  "engines": {
+    "node": ">=22.12"
+  }
+}

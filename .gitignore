@@ -1,0 +1,16 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+backend/media/
+backend/staticfiles/*
+!backend/staticfiles/.gitkeep
+node_modules/
+dist/
+coverage/
+.vite/
+*.log
