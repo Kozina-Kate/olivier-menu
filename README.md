@@ -47,6 +47,28 @@ npm run dev:web
 .venv/bin/python backend/manage.py createsuperuser
 ```
 
+## Автотесты
+
+Перед запуском frontend-тестов выберите версию Node.js из `.nvmrc`:
+
+```bash
+nvm use
+npm run test:web
+```
+
+Команда запускает Vitest один раз и завершается. Для разработки в режиме,
+который автоматически перезапускает тесты после изменения файлов:
+
+```bash
+npm run test:watch --workspace @olivier/web
+```
+
+Backend-тесты запускаются отдельно:
+
+```bash
+.venv/bin/python backend/manage.py test recipes
+```
+
 Секреты не должны попадать в Git. Переменные окружения перечислены в
 `.env.example`.
 
