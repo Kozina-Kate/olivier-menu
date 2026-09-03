@@ -1,0 +1,138 @@
+import type { Recipe } from '@olivier/core'
+import type { RecipeFilter } from '../hooks/useRecipeFilters'
+
+const difficultyLabels = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' }
+
+type RecipeCatalogProps = {
+  categories: Array<{ name: string; slug: string }>
+  filter: RecipeFilter
+  onFilterChange: (filter: RecipeFilter) => void
+  onOpenRecipe: (slug: string) => void
+  onQueryChange: (query: string) => void
+  onToggleMenu: (recipe: Recipe) => void
+  query: string
+  recipes: Recipe[]
+  selectedSlugs: Set<string>
+}
+
+/** Каталог — презентационный компонент: данные и обработчики приходят через props. */
+export function RecipeCatalog({
+  categories,
+  filter,
+  onFilterChange,
+  onOpenRecipe,
+  onQueryChange,
+  onToggleMenu,
+  query,
+  recipes,
+  selectedSlugs,
+}: RecipeCatalogProps) {
+  return (
+    <section className="catalog-section" id="recipes">
+      <div className="section-heading">
+        <div><p className="eyebrow">Каталог</p><h2>Что приготовим?</h2></div>
+        <label className="search-field">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Название или ингредиент"
+          />
+        </label>
+      </div>
+
+      <div className="filter-row" aria-label="Фильтры рецептов">
+        <FilterButton active={filter === 'all'} onClick={() => onFilterChange('all')}>
+          Все блюда
+        </FilterButton>
+        {categories.map((category) => (
+          <FilterButton
+            active={filter === `category:${category.slug}`}
+            key={category.slug}
+            onClick={() => onFilterChange(`category:${category.slug}`)}
+          >
+            {category.name}
+          </FilterButton>
+        ))}
+        <FilterButton active={filter === 'quick'} onClick={() => onFilterChange('quick')}>
+          До 60 минут
+        </FilterButton>
+        <FilterButton active={filter === 'easy'} onClick={() => onFilterChange('easy')}>
+          Легко
+        </FilterButton>
+      </div>
+
+      {recipes.length ? (
+        <div className="recipe-grid">
+          {recipes.map((recipe) => (
+            <RecipeCard
+              isSelected={selectedSlugs.has(recipe.slug)}
+              key={recipe.slug}
+              onOpen={() => onOpenRecipe(recipe.slug)}
+              onToggle={() => onToggleMenu(recipe)}
+              recipe={recipe}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="empty-state">Ничего не найдено. Попробуйте изменить поиск или фильтр.</p>
+      )}
+    </section>
+  )
+}
+
+type FilterButtonProps = {
+  active: boolean
+  children: React.ReactNode
+  onClick: () => void
+}
+
+function FilterButton({ active, children, onClick }: FilterButtonProps) {
+  return (
+    <button className={active ? 'filter active' : 'filter'} type="button" onClick={onClick}>
+      {children}
+    </button>
+  )
+}
+
+type RecipeCardProps = {
+  isSelected: boolean
+  onOpen: () => void
+  onToggle: () => void
+  recipe: Recipe
+}
+
+function RecipeCard({ isSelected, onOpen, onToggle, recipe }: RecipeCardProps) {
+  return (
+    <article className="recipe-card">
+      <div className="recipe-picture">
+        {recipe.imageUrl ? (
+          <img src={recipe.imageUrl} alt={recipe.title} />
+        ) : (
+          <div className="mini-bowl">{recipe.title.slice(0, 1)}</div>
+        )}
+        <span>{recipe.category.name}</span>
+      </div>
+      <div className="recipe-info">
+        <div className="recipe-meta">
+          <span>{recipe.totalMinutes} минут</span>
+          <span>{difficultyLabels[recipe.difficulty]}</span>
+          {recipe.isVegetarian && <span>Без мяса</span>}
+        </div>
+        <h3>{recipe.title}</h3>
+        <p>{recipe.summary}</p>
+        <div className="recipe-actions">
+          <button
+            className={isSelected ? 'menu-button selected' : 'menu-button'}
+            type="button"
+            onClick={onToggle}
+          >
+            {isSelected ? '✓ В меню' : '+ Добавить в меню'}
+          </button>
+          <a href="#recipe" onClick={onOpen}>Открыть рецепт →</a>
+        </div>
+      </div>
+    </article>
+  )
+}
