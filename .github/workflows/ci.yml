@@ -18,12 +18,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # package-lock.json is maintained on macOS. npm/cli#4828 can omit a
+      # platform-specific optional dependency from that lockfile, so install
+      # the exact Linux binding used by the locked oxlint version explicitly.
+      - run: npm install --no-save --package-lock=false @oxlint/binding-linux-x64-gnu@1.81.0
       - run: npm run check:frontend
 
   backend:
@@ -31,8 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
           cache: pip
