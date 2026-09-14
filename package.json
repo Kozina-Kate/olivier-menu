@@ -9,7 +9,13 @@
     "dev:web": "npm run dev --workspace @olivier/web",
     "build:web": "npm run build --workspace @olivier/web",
     "lint:web": "npm run lint --workspace @olivier/web",
-    "test:web": "npm run test --workspace @olivier/web"
+    "test:web": "npm run test --workspace @olivier/web",
+    "test:core": "npm run test --workspace @olivier/core",
+    "check:frontend": "npm run lint:web && npm run test:core && npm run test:web && npm run build:web",
+    "check": "./scripts/check.sh"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.0"
   },
   "engines": {
     "node": ">=22.12"
