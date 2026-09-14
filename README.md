@@ -49,6 +49,15 @@ npm run dev:web
 
 ## Автотесты
 
+Все проверки проекта одной командой (после установки npm- и Python-зависимостей):
+
+```bash
+npm run check
+```
+
+Команда запускает lint, тесты общей бизнес-логики и веба, production-сборку,
+Django system check, проверку миграций и backend-тесты.
+
 Перед запуском frontend-тестов выберите версию Node.js из `.nvmrc`:
 
 ```bash
@@ -68,6 +77,8 @@ Backend-тесты запускаются отдельно:
 ```bash
 .venv/bin/python backend/manage.py test recipes
 ```
+
+Правила второго MVP зафиксированы в [`docs/mvp2-contract.md`](docs/mvp2-contract.md).
 
 Секреты не должны попадать в Git. Переменные окружения перечислены в
 `.env.example`.
