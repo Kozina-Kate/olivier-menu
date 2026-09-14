@@ -1,4 +1,5 @@
 import type { Recipe } from '@olivier/core'
+import { Link } from 'react-router-dom'
 import type { RecipeFilter } from '../hooks/useRecipeFilters'
 
 const difficultyLabels = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' }
@@ -7,7 +8,6 @@ type RecipeCatalogProps = {
   categories: Array<{ name: string; slug: string }>
   filter: RecipeFilter
   onFilterChange: (filter: RecipeFilter) => void
-  onOpenRecipe: (slug: string) => void
   onQueryChange: (query: string) => void
   onToggleMenu: (recipe: Recipe) => void
   query: string
@@ -20,7 +20,6 @@ export function RecipeCatalog({
   categories,
   filter,
   onFilterChange,
-  onOpenRecipe,
   onQueryChange,
   onToggleMenu,
   query,
@@ -69,7 +68,6 @@ export function RecipeCatalog({
             <RecipeCard
               isSelected={selectedSlugs.has(recipe.slug)}
               key={recipe.slug}
-              onOpen={() => onOpenRecipe(recipe.slug)}
               onToggle={() => onToggleMenu(recipe)}
               recipe={recipe}
             />
@@ -98,12 +96,11 @@ function FilterButton({ active, children, onClick }: FilterButtonProps) {
 
 type RecipeCardProps = {
   isSelected: boolean
-  onOpen: () => void
   onToggle: () => void
   recipe: Recipe
 }
 
-function RecipeCard({ isSelected, onOpen, onToggle, recipe }: RecipeCardProps) {
+function RecipeCard({ isSelected, onToggle, recipe }: RecipeCardProps) {
   return (
     <article className="recipe-card">
       <div className="recipe-picture">
@@ -130,7 +127,7 @@ function RecipeCard({ isSelected, onOpen, onToggle, recipe }: RecipeCardProps) {
           >
             {isSelected ? '✓ В меню' : '+ Добавить в меню'}
           </button>
-          <a href="#recipe" onClick={onOpen}>Открыть рецепт →</a>
+          <Link to={`/recipes/${recipe.slug}`}>Открыть рецепт →</Link>
         </div>
       </div>
     </article>

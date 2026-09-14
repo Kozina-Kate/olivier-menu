@@ -1,5 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadRecipes } from './api'
 import App from './App'
@@ -11,6 +12,14 @@ vi.mock('./api', () => ({ loadRecipes: vi.fn() }))
 
 const mockedLoadRecipes = vi.mocked(loadRecipes)
 
+function renderApp(route = '/menu') {
+  return render(
+    <MemoryRouter initialEntries={[route]}>
+      <App />
+    </MemoryRouter>,
+  )
+}
+
 describe('App', () => {
   beforeEach(() => {
     // Возвращаем пустой ответ: useRecipes сохранит встроенный рецепт Оливье.
@@ -19,7 +28,7 @@ describe('App', () => {
 
   it('фильтрует каталог по введённому запросу', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
 
     // screen ищет элементы так же, как их воспринимает пользователь. Запрос по
     // placeholder устойчивее, чем привязка теста к CSS-классам или структуре DOM.
@@ -36,7 +45,7 @@ describe('App', () => {
 
   it('удаляет блюдо, блокирует экспорт и добавляет блюдо обратно', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
 
     await user.click(screen.getByRole('button', { name: '✓ В меню' }))
 
@@ -51,7 +60,7 @@ describe('App', () => {
 
   it('показывает пересчитанное количество продуктов для пяти гостей', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
 
     await user.click(screen.getByRole('button', { name: 'Увеличить' }))
 
@@ -61,5 +70,42 @@ describe('App', () => {
     expect(potatoRow).not.toBeNull()
     expect(within(potatoRow!).getByText('500 г')).toBeInTheDocument()
     expect(screen.getByText('на 5 чел.')).toBeInTheDocument()
+  })
+
+  it('показывает на главной только выбор из двух сценариев', () => {
+    renderApp('/')
+
+    expect(screen.queryByPlaceholderText('Название или ингредиент')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Составить меню и список покупок/ }))
+      .toHaveAttribute('href', '/menu')
+    expect(screen.getByRole('link', { name: /Приготовить из продуктов дома/ }))
+      .toHaveAttribute('href', '/pantry')
+  })
+
+  it('переходит с главной в работающий конструктор меню', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+
+    await user.click(screen.getByRole('link', { name: /Составить меню и список покупок/ }))
+
+    expect(screen.getByPlaceholderText('Название или ингредиент')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Что приготовим?' })).toBeInTheDocument()
+  })
+
+  it('открывает самостоятельный раздел продуктов дома', () => {
+    renderApp('/pantry')
+
+    expect(screen.getByRole('heading', { name: 'Что есть на вашей кухне?' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '← К выбору сценария' })).toHaveAttribute('href', '/')
+  })
+
+  it('открывает рецепт по прямому URL', () => {
+    renderApp('/recipes/olivier')
+
+    expect(screen.getByRole('heading', { name: 'Классический Оливье' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '← К каталогу' })).toHaveAttribute(
+      'href',
+      '/menu#recipes',
+    )
   })
 })
