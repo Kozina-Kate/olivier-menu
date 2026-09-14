@@ -14,6 +14,7 @@ export function useRecipes() {
   // useState хранит данные между рендерами. Изменение через setRecipes просит
   // React заново отрисовать только те части интерфейса, которым нужны рецепты.
   const [recipes, setRecipes] = useState<Recipe[]>([olivierRecipe])
+  const [isLoading, setIsLoading] = useState(true)
 
   // useEffect предназначен для синхронизации с внешним миром. HTTP-запрос —
   // побочный эффект, поэтому он не выполняется прямо во время рендера.
@@ -29,6 +30,9 @@ export function useRecipes() {
       .catch(() => {
         // При недоступном API в состоянии остаётся резервный рецепт Оливье.
       })
+      .finally(() => {
+        if (isCurrent) setIsLoading(false)
+      })
 
     // Cleanup-функция вызывается при размонтировании. Она не отменяет запрос,
     // но не позволяет завершившемуся запросу обновить уже удалённый компонент.
@@ -37,5 +41,5 @@ export function useRecipes() {
     }
   }, [])
 
-  return { recipes }
+  return { isLoading, recipes }
 }
