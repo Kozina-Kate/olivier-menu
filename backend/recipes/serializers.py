@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Recipe, RecipeIngredient, RecipeStep
+from .models import Category, Ingredient, Recipe, RecipeIngredient, RecipeStep
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -9,8 +9,17 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ("id", "name", "slug")
 
 
+class IngredientSerializer(serializers.ModelSerializer):
+    section_label = serializers.CharField(source="get_section_display", read_only=True)
+
+    class Meta:
+        model = Ingredient
+        fields = ("id", "slug", "name", "section", "section_label")
+
+
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source="ingredient.id", read_only=True)
+    slug = serializers.CharField(source="ingredient.slug", read_only=True)
     name = serializers.CharField(source="ingredient.name", read_only=True)
     section = serializers.CharField(source="ingredient.section", read_only=True)
     section_label = serializers.CharField(
@@ -22,6 +31,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
         model = RecipeIngredient
         fields = (
             "id",
+            "slug",
             "name",
             "section",
             "section_label",
@@ -29,6 +39,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
             "unit",
             "unit_label",
             "note",
+            "is_required",
             "order",
         )
 

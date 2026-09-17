@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -17,16 +18,21 @@ class Category(models.Model):
 
 class Ingredient(models.Model):
     class Section(models.TextChoices):
-        VEGETABLES = "vegetables", "Овощи и зелень"
-        MEAT = "meat", "Мясо и птица"
-        DAIRY = "dairy", "Молочные продукты и яйца"
+        MEAT_FISH_POULTRY = "meat_fish_poultry", "Мясо, рыба и птица"
+        VEGETABLES_FRUIT = "vegetables_fruit", "Овощи и фрукты"
+        DAIRY_EGGS = "dairy_eggs", "Молочные продукты и яйца"
         GROCERY = "grocery", "Бакалея"
         CANNED = "canned", "Консервы"
+        SAUCES_SPICES = "sauces_spices", "Соусы и специи"
         OTHER = "other", "Другое"
 
     name = models.CharField("Название", max_length=120, unique=True)
+    slug = models.SlugField(
+        "Устойчивый код", max_length=140, unique=True,
+        help_text="Не меняйте после создания: код используется клиентами API.",
+    )
     section = models.CharField(
-        "Отдел магазина", max_length=20, choices=Section.choices, default=Section.OTHER
+        "Отдел магазина", max_length=24, choices=Section.choices, default=Section.OTHER
     )
 
     class Meta:
@@ -36,6 +42,18 @@ class Ingredient(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        self.name = self.name.strip()
+        if not self.name:
+            raise ValidationError({"name": "Укажите название продукта."})
+        # В админке не создаём второй объект из-за регистра или пробелов.
+        existing_names = Ingredient.objects.exclude(pk=self.pk).values_list(
+            "name", flat=True
+        )
+        if any(name.strip().casefold() == self.name.casefold() for name in existing_names):
+            raise ValidationError({"name": "Такой продукт уже есть в справочнике."})
 
 
 class Recipe(models.Model):
@@ -108,6 +126,7 @@ class RecipeIngredient(models.Model):
     )
     unit = models.CharField("Единица", max_length=12, choices=Unit.choices)
     note = models.CharField("Примечание", max_length=160, blank=True)
+    is_required = models.BooleanField("Обязательный", default=True)
     order = models.PositiveSmallIntegerField("Порядок", default=0)
 
     class Meta:

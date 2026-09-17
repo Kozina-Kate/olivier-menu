@@ -3,18 +3,19 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
+from recipes.management.seed_utils import upsert_ingredient
 from recipes.models import Category, Ingredient, Recipe, RecipeIngredient, RecipeStep
 
 
 INGREDIENTS = [
-    ("Картофель", Ingredient.Section.VEGETABLES, "400", RecipeIngredient.Unit.GRAM, ""),
-    ("Морковь", Ingredient.Section.VEGETABLES, "180", RecipeIngredient.Unit.GRAM, ""),
-    ("Яйца", Ingredient.Section.DAIRY, "4", RecipeIngredient.Unit.PIECE, ""),
-    ("Варёная колбаса", Ingredient.Section.MEAT, "300", RecipeIngredient.Unit.GRAM, ""),
-    ("Солёные огурцы", Ingredient.Section.CANNED, "200", RecipeIngredient.Unit.GRAM, ""),
-    ("Зелёный горошек", Ingredient.Section.CANNED, "200", RecipeIngredient.Unit.GRAM, "без жидкости"),
-    ("Майонез", Ingredient.Section.GROCERY, "120", RecipeIngredient.Unit.GRAM, ""),
-    ("Соль", Ingredient.Section.GROCERY, "1", RecipeIngredient.Unit.TO_TASTE, ""),
+    ("potato", "Картофель", Ingredient.Section.VEGETABLES_FRUIT, "400", RecipeIngredient.Unit.GRAM, "", True),
+    ("carrot", "Морковь", Ingredient.Section.VEGETABLES_FRUIT, "180", RecipeIngredient.Unit.GRAM, "", True),
+    ("eggs", "Яйца", Ingredient.Section.DAIRY_EGGS, "4", RecipeIngredient.Unit.PIECE, "", True),
+    ("cooked-sausage", "Варёная колбаса", Ingredient.Section.MEAT_FISH_POULTRY, "300", RecipeIngredient.Unit.GRAM, "", True),
+    ("pickles", "Солёные огурцы", Ingredient.Section.CANNED, "200", RecipeIngredient.Unit.GRAM, "", True),
+    ("green-peas", "Зелёный горошек", Ingredient.Section.CANNED, "200", RecipeIngredient.Unit.GRAM, "без жидкости", True),
+    ("mayonnaise", "Майонез", Ingredient.Section.SAUCES_SPICES, "120", RecipeIngredient.Unit.GRAM, "", True),
+    ("salt", "Соль", Ingredient.Section.SAUCES_SPICES, "1", RecipeIngredient.Unit.TO_TASTE, "", False),
 ]
 
 STEPS = [
@@ -53,16 +54,15 @@ class Command(BaseCommand):
         )
 
         recipe.recipe_ingredients.all().delete()
-        for order, (name, section, quantity, unit, note) in enumerate(INGREDIENTS, 1):
-            ingredient, _ = Ingredient.objects.update_or_create(
-                name=name, defaults={"section": section}
-            )
+        for order, (slug, name, section, quantity, unit, note, is_required) in enumerate(INGREDIENTS, 1):
+            ingredient = upsert_ingredient(slug, name, section)
             RecipeIngredient.objects.create(
                 recipe=recipe,
                 ingredient=ingredient,
                 quantity=Decimal(quantity),
                 unit=unit,
                 note=note,
+                is_required=is_required,
                 order=order,
             )
 

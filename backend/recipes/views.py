@@ -1,10 +1,12 @@
 from django.db.models import Prefetch
 from django.http import JsonResponse
 from rest_framework import viewsets
+from rest_framework.response import Response
 
-from .models import Category, Recipe, RecipeIngredient
+from .models import Category, Ingredient, Recipe, RecipeIngredient
 from .serializers import (
     CategorySerializer,
+    IngredientSerializer,
     RecipeDetailSerializer,
 )
 
@@ -17,6 +19,31 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = None
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = IngredientSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return Ingredient.objects.filter(
+            recipe_ingredients__recipe__status=Recipe.Status.PUBLISHED
+        ).distinct()
+
+    def list(self, request, *args, **kwargs):
+        # Python casefold сортирует кириллицу одинаково на SQLite и PostgreSQL.
+        section_order = {
+            section: index for index, section in enumerate(Ingredient.Section.values)
+        }
+        ingredients = sorted(
+            self.get_queryset(),
+            key=lambda item: (
+                section_order.get(item.section, len(section_order)),
+                item.name.casefold(),
+                item.pk,
+            ),
+        )
+        return Response(self.get_serializer(ingredients, many=True).data)
 
 
 class RecipeViewSet(viewsets.ReadOnlyModelViewSet):
