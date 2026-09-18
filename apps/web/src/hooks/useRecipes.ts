@@ -15,6 +15,7 @@ export function useRecipes() {
   // React заново отрисовать только те части интерфейса, которым нужны рецепты.
   const [recipes, setRecipes] = useState<Recipe[]>([olivierRecipe])
   const [isLoading, setIsLoading] = useState(true)
+  const [isFallback, setIsFallback] = useState(false)
 
   // useEffect предназначен для синхронизации с внешним миром. HTTP-запрос —
   // побочный эффект, поэтому он не выполняется прямо во время рендера.
@@ -25,10 +26,13 @@ export function useRecipes() {
 
     loadRecipes()
       .then((loadedRecipes) => {
-        if (isCurrent && loadedRecipes.length) setRecipes(loadedRecipes)
+        if (!isCurrent) return
+        if (loadedRecipes.length) setRecipes(loadedRecipes)
+        else setIsFallback(true)
       })
       .catch(() => {
-        // При недоступном API в состоянии остаётся резервный рецепт Оливье.
+        // При недоступном API оставляем демо-рецепт, но явно сообщаем об этом.
+        if (isCurrent) setIsFallback(true)
       })
       .finally(() => {
         if (isCurrent) setIsLoading(false)
@@ -41,5 +45,5 @@ export function useRecipes() {
     }
   }, [])
 
-  return { isLoading, recipes }
+  return { isLoading, isFallback, recipes }
 }

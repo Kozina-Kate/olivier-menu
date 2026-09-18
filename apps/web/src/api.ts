@@ -30,6 +30,34 @@ type ApiPage = {
   results: ApiRecipe[]
 }
 
+export type PantryIngredient = {
+  id: number
+  slug: string
+  name: string
+  section: string
+  section_label: string
+}
+
+export type RecipeMatch = {
+  recipe: Recipe
+  canCook: boolean
+  matchPercent: number
+  matchedIngredients: MatchIngredient[]
+  missingIngredients: MatchIngredient[]
+}
+
+type MatchIngredient = Pick<PantryIngredient, 'id' | 'slug' | 'name'> & {
+  is_required: boolean
+}
+
+type ApiMatch = {
+  recipe: ApiRecipe
+  can_cook: boolean
+  match_percent: number
+  matched_ingredients: MatchIngredient[]
+  missing_ingredients: MatchIngredient[]
+}
+
 const apiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api/v1'
 
 function mapRecipe(data: ApiRecipe): Recipe {
@@ -74,4 +102,24 @@ export async function loadRecipes(): Promise<Recipe[]> {
   }
 
   return recipes.map(mapRecipe)
+}
+
+export async function loadPantryIngredients(): Promise<PantryIngredient[]> {
+  const response = await fetch(`${apiUrl}/ingredients/`)
+  if (!response.ok) throw new Error(`Ingredients request failed: ${response.status}`)
+  return (await response.json()) as PantryIngredient[]
+}
+
+export async function loadRecipeMatches(ids: number[]): Promise<RecipeMatch[]> {
+  const query = new URLSearchParams({ ingredients: ids.join(',') })
+  const response = await fetch(`${apiUrl}/recipes/matches/?${query}`)
+  if (!response.ok) throw new Error(`Matches request failed: ${response.status}`)
+  const data = (await response.json()) as { count: number; results: ApiMatch[] }
+  return data.results.map((match) => ({
+    recipe: mapRecipe(match.recipe),
+    canCook: match.can_cook,
+    matchPercent: match.match_percent,
+    matchedIngredients: match.matched_ingredients,
+    missingIngredients: match.missing_ingredients,
+  }))
 }
