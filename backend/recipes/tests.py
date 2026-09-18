@@ -138,6 +138,217 @@ class IngredientApiTests(APITestCase):
             duplicate.full_clean()
 
 
+class RecipeMatchApiTests(APITestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name="Завтраки", slug="breakfast")
+        self.ingredients = {
+            slug: Ingredient.objects.create(slug=slug, name=name)
+            for slug, name in [
+                ("eggs", "Яйца"), ("milk", "Молоко"),
+                ("butter", "Масло"), ("bread", "Хлеб"),
+                ("cheese", "Сыр"), ("salt", "Соль"),
+                ("draft-only", "Только в черновике"),
+                ("unused", "Неиспользуемый"),
+            ]
+        }
+        self.add_recipe(
+            "omelette", "Омлет", ["eggs", "milk", "butter"], ["salt"]
+        )
+        self.add_recipe("fried-eggs", "Яичница", ["eggs"], ["salt"])
+        self.add_recipe("salad", "Салат", ["eggs", "cheese"])
+        self.add_recipe("sandwich", "Сэндвич", ["eggs", "bread", "cheese"])
+        self.add_recipe(
+            "draft", "Черновик", ["eggs", "draft-only"],
+            status=Recipe.Status.DRAFT,
+        )
+
+    def add_recipe(self, slug, title, required, optional=(), status=Recipe.Status.PUBLISHED):
+        recipe = Recipe.objects.create(
+            slug=slug, title=title, summary=title, category=self.category,
+            status=status,
+        )
+        for order, ingredient_slug in enumerate([*required, *optional], 1):
+            RecipeIngredient.objects.create(
+                recipe=recipe, ingredient=self.ingredients[ingredient_slug],
+                quantity=1, unit=RecipeIngredient.Unit.PIECE,
+                is_required=ingredient_slug in required, order=order,
+            )
+        RecipeStep.objects.create(recipe=recipe, order=1, description="Приготовить.")
+        return recipe
+
+    def get_matches(self, *slugs):
+        ingredient_ids = ",".join(
+            str(self.ingredients[slug].pk) for slug in slugs
+        )
+        return self.client.get(reverse("recipe-matches"), {"ingredients": ingredient_ids})
+
+    def test_full_partial_and_ranked_matches_use_recipe_detail_shape(self):
+        response = self.get_matches("eggs", "milk", "butter")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 4)
+        self.assertEqual(
+            [item["recipe"]["slug"] for item in response.data["results"]],
+            ["omelette", "fried-eggs", "salad", "sandwich"],
+        )
+        self.assertEqual(
+            [item["match_percent"] for item in response.data["results"]],
+            [100, 100, 50, 33],
+        )
+        self.assertEqual(
+            [item["can_cook"] for item in response.data["results"]],
+            [True, True, False, False],
+        )
+        salad = response.data["results"][2]
+        self.assertEqual(
+            [item["slug"] for item in salad["matched_ingredients"]], ["eggs"]
+        )
+        self.assertEqual(
+            [item["slug"] for item in salad["missing_ingredients"]], ["cheese"]
+        )
+        self.assertEqual(
+            set(salad["missing_ingredients"][0]),
+            {"id", "slug", "name", "is_required"},
+        )
+        detail = self.client.get(
+            reverse("recipe-detail", kwargs={"slug": "salad"})
+        )
+        self.assertEqual(salad["recipe"], detail.data)
+
+    def test_optional_ingredient_is_visible_but_not_required_for_match(self):
+        eggs_only = self.get_matches("eggs")
+        with_optional = self.get_matches("eggs", "salt")
+
+        self.assertEqual(eggs_only.status_code, 200)
+        self.assertEqual(with_optional.status_code, 200)
+        self.assertEqual(
+            [item["recipe"]["slug"] for item in with_optional.data["results"]],
+            [item["recipe"]["slug"] for item in eggs_only.data["results"]],
+        )
+        omelette = next(
+            item for item in with_optional.data["results"]
+            if item["recipe"]["slug"] == "omelette"
+        )
+        self.assertEqual(omelette["match_percent"], 33)
+        self.assertEqual(
+            [item["slug"] for item in omelette["matched_ingredients"]],
+            ["eggs", "salt"],
+        )
+        self.assertFalse(omelette["matched_ingredients"][1]["is_required"])
+        self.assertEqual(
+            [item["slug"] for item in omelette["missing_ingredients"]],
+            ["milk", "butter"],
+        )
+        self.assertEqual(self.get_matches("salt").data, {"count": 0, "results": []})
+
+    def test_repeated_ids_do_not_change_the_result(self):
+        single = self.get_matches("eggs")
+        repeated = self.get_matches("eggs", "eggs")
+        self.assertEqual(repeated.status_code, 200)
+        self.assertEqual(repeated.data, single.data)
+
+    def test_half_percent_is_rounded_up(self):
+        self.add_recipe(
+            "eighth", "Восьмая доля",
+            ["eggs", "milk", "butter", "bread", "cheese", "salt", "draft-only", "unused"],
+        )
+        response = self.get_matches("eggs")
+        eighth = next(
+            item for item in response.data["results"]
+            if item["recipe"]["slug"] == "eighth"
+        )
+        self.assertEqual(eighth["match_percent"], 13)
+
+    def test_missing_empty_and_malformed_ids_have_stable_errors(self):
+        endpoint = reverse("recipe-matches")
+        for response in [self.client.get(endpoint), self.client.get(endpoint, {"ingredients": " "})]:
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.data, {
+                "code": "ingredients_required", "invalid_values": [], "unknown_ids": [],
+            })
+
+        malformed = self.client.get(endpoint, {
+            "ingredients": f"0,-1,abc,,2.5,{2**63}"
+        })
+        self.assertEqual(malformed.status_code, 400)
+        self.assertEqual(malformed.data["code"], "invalid_ingredients")
+        self.assertEqual(
+            malformed.data["invalid_values"],
+            ["0", "-1", "abc", "", "2.5", str(2**63)],
+        )
+        repeated_param = self.client.get(
+            f"{endpoint}?ingredients=1&ingredients=2"
+        )
+        self.assertEqual(repeated_param.status_code, 400)
+        self.assertEqual(repeated_param.data["code"], "invalid_ingredients")
+
+    def test_unknown_unpublished_and_unused_ids_are_rejected(self):
+        unknown = self.ingredients["unused"].pk + 1000
+        response = self.client.get(reverse("recipe-matches"), {
+            "ingredients": ",".join(map(str, [
+                self.ingredients["eggs"].pk,
+                self.ingredients["draft-only"].pk,
+                self.ingredients["unused"].pk,
+                unknown,
+            ]))
+        })
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {
+            "code": "unknown_ingredients", "invalid_values": [],
+            "unknown_ids": [
+                self.ingredients["draft-only"].pk,
+                self.ingredients["unused"].pk,
+                unknown,
+            ],
+        })
+
+    def test_zero_matches_and_draft_are_not_returned(self):
+        response = self.get_matches("bread")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["recipe"]["slug"], "sandwich")
+        self.assertNotIn(
+            "draft", [item["recipe"]["slug"] for item in self.get_matches("eggs").data["results"]]
+        )
+        self.assertEqual(self.get_matches("salt").data, {"count": 0, "results": []})
+
+    def test_sort_ties_by_missing_count_then_name(self):
+        self.add_recipe("four", "А Длинный", ["eggs", "milk", "bread", "cheese"])
+        self.add_recipe("two", "А Короткий", ["eggs", "bread"])
+        self.add_recipe("two-more", "Б Короткий", ["eggs", "bread"])
+
+        response = self.get_matches("eggs", "milk")
+        matching = [
+            item["recipe"]["slug"] for item in response.data["results"]
+            if item["match_percent"] == 50
+        ]
+        self.assertEqual(matching, ["two", "two-more", "salad", "four"])
+
+    def test_equal_titles_have_stable_id_order(self):
+        first = self.add_recipe("same-a", "Повтор", ["eggs", "bread"])
+        second = self.add_recipe("same-b", "Повтор", ["eggs", "bread"])
+
+        response = self.get_matches("eggs")
+        matching = [
+            item["recipe"]["id"] for item in response.data["results"]
+            if item["recipe"]["title"] == "Повтор"
+        ]
+        self.assertEqual(matching, [first.pk, second.pk])
+
+    def test_query_count_does_not_grow_with_recipe_count(self):
+        for index in range(20):
+            self.add_recipe(f"extra-{index}", f"Блюдо {index}", ["eggs", "bread"])
+
+        with self.assertNumQueries(4):
+            response = self.get_matches("eggs")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 24)
+
+    def test_matches_endpoint_is_read_only(self):
+        response = self.client.post(reverse("recipe-matches"), {"ingredients": "1"})
+        self.assertEqual(response.status_code, 405)
+
+
 class RecipeAdminValidationTests(TestCase):
     @override_settings(STORAGES={
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}
