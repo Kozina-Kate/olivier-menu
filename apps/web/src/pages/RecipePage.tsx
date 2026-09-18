@@ -1,5 +1,5 @@
 import type { Recipe } from '@olivier/core'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { RecipeDetails } from '../components/RecipeDetails'
 
 type RecipePageProps = {
@@ -9,7 +9,10 @@ type RecipePageProps = {
 
 export function RecipePage({ isLoading, recipes }: RecipePageProps) {
   const { slug } = useParams()
-  const recipe = recipes.find((item) => item.slug === slug)
+  const location = useLocation()
+  const routeState = location.state as { fromPantry?: boolean; pantryRecipe?: Recipe } | null
+  const pantryRecipe = routeState?.pantryRecipe
+  const recipe = pantryRecipe?.slug === slug ? pantryRecipe : recipes.find((item) => item.slug === slug)
 
   if (!recipe && isLoading) {
     return (
@@ -32,7 +35,9 @@ export function RecipePage({ isLoading, recipes }: RecipePageProps) {
   return (
     <div className="recipe-page">
       <div className="route-toolbar">
-        <Link className="back-link" to="/menu#recipes">← К каталогу</Link>
+        <Link className="back-link" to={routeState?.fromPantry ? '/pantry#pantry-results' : '/menu#recipes'}>
+          {routeState?.fromPantry ? '← К подбору рецептов' : '← К каталогу'}
+        </Link>
       </div>
       <RecipeDetails recipe={recipe} />
     </div>

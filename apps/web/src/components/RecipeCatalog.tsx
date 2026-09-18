@@ -1,5 +1,6 @@
 import type { Recipe } from '@olivier/core'
 import { Link } from 'react-router-dom'
+import type { RecipeMatch } from '../api'
 import type { RecipeFilter } from '../hooks/useRecipeFilters'
 
 const difficultyLabels = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' }
@@ -95,12 +96,14 @@ function FilterButton({ active, children, onClick }: FilterButtonProps) {
 }
 
 type RecipeCardProps = {
-  isSelected: boolean
-  onToggle: () => void
+  isSelected?: boolean
+  onToggle?: () => void
+  match?: RecipeMatch
+  onEditProducts?: () => void
   recipe: Recipe
 }
 
-function RecipeCard({ isSelected, onToggle, recipe }: RecipeCardProps) {
+export function RecipeCard({ isSelected, onToggle, match, onEditProducts, recipe }: RecipeCardProps) {
   return (
     <article className="recipe-card">
       <div className="recipe-picture">
@@ -112,6 +115,14 @@ function RecipeCard({ isSelected, onToggle, recipe }: RecipeCardProps) {
         <span>{recipe.category.name}</span>
       </div>
       <div className="recipe-info">
+        {match && (
+          <div className="match-summary">
+            <span className={match.canCook ? 'match-badge full' : 'match-badge'}>
+              {match.canCook ? '✓ Можно приготовить' : 'Почти подходит'}
+            </span>
+            <strong>{match.matchPercent}% совпадения</strong>
+          </div>
+        )}
         <div className="recipe-meta">
           <span>{recipe.totalMinutes} минут</span>
           <span>{difficultyLabels[recipe.difficulty]}</span>
@@ -119,15 +130,30 @@ function RecipeCard({ isSelected, onToggle, recipe }: RecipeCardProps) {
         </div>
         <h3>{recipe.title}</h3>
         <p>{recipe.summary}</p>
+        {match && !match.canCook && (
+          <p className="missing-products">
+            Не хватает: {match.missingIngredients.map((item) => item.name).join(', ')}
+          </p>
+        )}
         <div className="recipe-actions">
-          <button
-            className={isSelected ? 'menu-button selected' : 'menu-button'}
-            type="button"
-            onClick={onToggle}
-          >
-            {isSelected ? '✓ В меню' : '+ Добавить в меню'}
-          </button>
-          <Link to={`/recipes/${recipe.slug}`}>Открыть рецепт →</Link>
+          {onToggle && (
+            <button
+              className={isSelected ? 'menu-button selected' : 'menu-button'}
+              type="button"
+              onClick={onToggle}
+            >
+              {isSelected ? '✓ В меню' : '+ Добавить в меню'}
+            </button>
+          )}
+          <Link
+            to={`/recipes/${recipe.slug}`}
+            state={match ? { pantryRecipe: recipe, fromPantry: true } : undefined}
+          >Открыть рецепт →</Link>
+          {onEditProducts && (
+            <button className="text-button" type="button" onClick={onEditProducts}>
+              Изменить продукты
+            </button>
+          )}
         </div>
       </div>
     </article>

@@ -22,7 +22,7 @@ import './App.css'
  * hooks создают данные и callbacks → App передаёт их компонентам через props.
  */
 function App() {
-  const { isLoading, recipes } = useRecipes()
+  const { isLoading, isFallback, recipes } = useRecipes()
   const filters = useRecipeFilters(recipes)
   const menu = useMenuPlanner(recipes)
   const shoppingActions = useShoppingListActions({
@@ -43,6 +43,11 @@ function App() {
             element={(
               <>
                 <HeroSection />
+                {isFallback && (
+                  <p className="menu-fallback" role="status">
+                    Каталог сейчас недоступен или пуст. Показан демонстрационный рецепт Оливье.
+                  </p>
+                )}
                 <RecipeCatalog
                   categories={filters.categories}
                   filter={filters.filter}
