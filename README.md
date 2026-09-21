@@ -15,9 +15,13 @@
 редактируются через Django Admin. Веб и будущее мобильное приложение читают их
 через единый API `/api/v1/`.
 
+Инструкция по локальному PostgreSQL и обязательным production-переменным:
+[`docs/postgresql-production.md`](docs/postgresql-production.md).
+
 ## Локальный запуск
 
-Нужны Python 3.13+ и Node.js 22.12+.
+Нужны Python 3.13+ и Node.js 22.12+. Docker нужен только для локального запуска
+PostgreSQL; без него backend продолжает работать с SQLite.
 
 ```bash
 python3 -m venv .venv
@@ -84,7 +88,7 @@ npm run test:watch --workspace @olivier/web
 Backend-тесты запускаются отдельно:
 
 ```bash
-.venv/bin/python backend/manage.py test recipes
+.venv/bin/python backend/manage.py test recipes config
 ```
 
 Frontend проверяется Vitest и React Testing Library, backend — встроенным
