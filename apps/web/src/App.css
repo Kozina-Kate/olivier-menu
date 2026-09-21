@@ -10,7 +10,13 @@
   --line: #dfe3d6;
 }
 
-.app-shell { min-height: 100vh; overflow: hidden; }
+.app-shell { min-height: 100vh; overflow-x: clip; }
+main, main > section, .home-intro > *, .scenario-card, .pantry-toolbar > *,
+.recipe-card > *, .planner-section > * { min-width: 0; }
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex="-1"]:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+}
 .topbar, main > section, footer { width: min(1180px, calc(100% - 48px)); margin-inline: auto; }
 .topbar { height: 82px; display: flex; align-items: center; gap: 44px; border-bottom: 1px solid var(--line); }
 .brand { display: inline-flex; align-items: center; gap: 8px; font-family: Georgia, serif; font-size: 24px; font-weight: 700; text-decoration: none; color: var(--ink); }
@@ -65,7 +71,7 @@
 .text-button:hover { text-decoration: underline; }
 .text-button:disabled { color: #9aa298; cursor: not-allowed; }
 .pantry-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 20px; }
-.pantry-group { padding: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.pantry-group { padding: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); overflow-wrap: anywhere; }
 .pantry-group h2 { margin-bottom: 20px; font-size: 28px; font-weight: 500; }
 .pantry-products { display: flex; flex-wrap: wrap; gap: 10px; }
 .product-chip { display: inline-flex; align-items: center; gap: 9px; padding: 11px 14px; border: 1px solid #cbd7c8; border-radius: 5px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
@@ -78,7 +84,7 @@
 .primary-button { border: 0; font: inherit; cursor: pointer; }
 .primary-button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 .secondary-button { background: transparent; font: inherit; font-weight: 750; cursor: pointer; }
-.pantry-state { padding: 42px; border: 1px dashed var(--line); border-radius: 8px; background: var(--paper); color: var(--muted); }
+.pantry-state { padding: 42px; border: 1px dashed var(--line); border-radius: 8px; background: var(--paper); color: var(--muted); overflow-wrap: anywhere; }
 .pantry-state h2, .pantry-state h3 { margin-bottom: 12px; color: var(--ink); font: 500 30px Georgia, serif; }
 .pantry-state p { margin-bottom: 22px; }
 .pantry-state p:last-child { margin-bottom: 0; }
@@ -143,7 +149,7 @@ h1 { max-width: 720px; margin-bottom: 26px; font-size: clamp(48px, 6.1vw, 82px);
 .recipe-picture:has(img)::before, .recipe-picture:has(img)::after { display: none; }
 .recipe-picture > span { position: absolute; left: 20px; bottom: 18px; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--green); }
 .recipe-picture:has(img) > span { padding: 7px 9px; border-radius: 3px; background: rgba(255, 253, 247, .9); }
-.recipe-info { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(34px, 5vw, 70px); }
+.recipe-info { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(34px, 5vw, 70px); overflow-wrap: anywhere; }
 .recipe-meta { display: flex; gap: 8px; margin-bottom: 20px; }
 .recipe-meta span, .time-label { padding: 7px 10px; border-radius: 999px; background: #eff1e5; color: var(--green); font-size: 12px; font-weight: 750; }
 .recipe-info h3, .shopping-header h3 { margin-bottom: 14px; color: var(--ink); font: 500 clamp(30px, 4vw, 48px)/1.05 Georgia, serif; }
@@ -228,6 +234,16 @@ footer p { margin: 0; color: var(--muted); font-size: 13px; }
   .planner-intro, .shopping-card { padding: 65px 24px; }
   .steps-list li { grid-template-columns: 50px 1fr; gap: 12px; }
   footer { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: 42px; }
+  .pantry-submit .primary-button, .pantry-results-heading .secondary-button { width: 100%; justify-content: center; }
+  .recipe-info { padding: 28px 22px; }
+  .recipe-meta { flex-wrap: wrap; }
+  .shopping-list li { align-items: flex-start; }
+  .shopping-list strong { flex: none; }
+  .toast { right: 15px; bottom: 15px; left: 15px; text-align: center; }
 }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }

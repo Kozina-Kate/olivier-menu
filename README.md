@@ -43,6 +43,13 @@ npm run dev:web
 - подбор из продуктов дома: <http://localhost:5173/pantry>
 - админка: <http://localhost:8000/admin/>
 
+Веб по умолчанию обращается к `http://localhost:8000/api/v1`. Другой адрес
+можно задать в корневом `.env`:
+
+```dotenv
+VITE_API_URL=https://example.test/api/v1
+```
+
 Для входа в админку локально создайте пользователя:
 
 ```bash
@@ -80,6 +87,11 @@ Backend-тесты запускаются отдельно:
 .venv/bin/python backend/manage.py test recipes
 ```
 
+Frontend проверяется Vitest и React Testing Library, backend — встроенным
+тестовым раннером Django и Django REST Framework. Cypress, Playwright и Jest в
+проекте не используются. Ручной чек-лист адаптивности и доступности находится
+в [`docs/mvp2-qa.md`](docs/mvp2-qa.md).
+
 Правила второго MVP зафиксированы в [`docs/mvp2-contract.md`](docs/mvp2-contract.md).
 
 `seed_demo` можно запускать повторно: он создаёт или обновляет 12 опубликованных
@@ -105,6 +117,19 @@ Backend-тесты запускаются отдельно:
 мешают приготовить блюдо; рецепты без совпадений по обязательным продуктам
 не показываются. Пустой или неверный список ID возвращает `400` с кодом ошибки,
 описанным в [`docs/mvp2-contract.md`](docs/mvp2-contract.md).
+
+Примеры запросов после локального запуска backend:
+
+```bash
+curl http://localhost:8000/api/v1/ingredients/
+curl 'http://localhost:8000/api/v1/recipes/matches/?ingredients=1,2,3'
+```
+
+Успешный подбор возвращает `{ "count": N, "results": [...] }`. Ошибка входных
+данных возвращает HTTP 400 и стабильный `code`: `ingredients_required`,
+`invalid_ingredients` или `unknown_ingredients`. Техническая ошибка API не
+заменяется демонстрационными данными на `/pantry`: пользователь увидит сообщение
+и кнопку повторного запроса.
 
 На странице `/pantry` можно найти и отметить продукты по разделам, затем
 посмотреть полные и частичные совпадения с процентом и недостающими продуктами.
