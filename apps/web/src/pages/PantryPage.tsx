@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { PantryIngredient, RecipeMatch } from '../api'
 import { RecipeCard } from '../components/RecipeCatalog'
@@ -40,12 +40,18 @@ function MatchGroup({ title, matches, onEdit }: {
 
 export function PantryPage() {
   const [query, setQuery] = useState('')
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null)
   const pantry = usePantry()
   const filtered = pantry.ingredients?.filter((item) =>
     item.name.toLocaleLowerCase('ru').includes(query.trim().toLocaleLowerCase('ru')),
   ) ?? []
   const ready = pantry.matches?.filter((match) => match.canCook) ?? []
   const close = pantry.matches?.filter((match) => !match.canCook) ?? []
+
+  useEffect(() => {
+    if (!pantry.submittedIds || (pantry.matches === null && !pantry.matchesError)) return
+    resultsHeadingRef.current?.focus()
+  }, [pantry.matches, pantry.matchesError, pantry.submittedIds])
 
   return (
     <section className="standalone-page pantry-page" aria-labelledby="pantry-title">
@@ -132,7 +138,10 @@ export function PantryPage() {
           {pantry.submittedIds && (
             <div className="pantry-results" id="pantry-results" aria-live="polite">
               <div className="pantry-results-heading">
-                <div><p className="eyebrow">Подбор</p><h2>Что приготовить?</h2></div>
+                <div>
+                  <p className="eyebrow">Подбор</p>
+                  <h2 ref={resultsHeadingRef} tabIndex={-1}>Что приготовить?</h2>
+                </div>
                 <button className="secondary-button" type="button" onClick={pantry.edit}>Изменить продукты</button>
               </div>
               {pantry.matchesError ? (

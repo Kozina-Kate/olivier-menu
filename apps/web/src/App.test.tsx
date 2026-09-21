@@ -141,13 +141,13 @@ describe('App', () => {
     const user = userEvent.setup()
     mockedLoadRecipeMatches.mockResolvedValue([
       {
-        recipe: tomatoSoupRecipe, canCook: true, matchPercent: 100,
-        matchedIngredients: [], missingIngredients: [],
-      },
-      {
         recipe: { ...tomatoSoupRecipe, slug: 'tomato-salad', title: 'Томатный салат' },
         canCook: false, matchPercent: 50, matchedIngredients: [],
         missingIngredients: [{ id: 3, slug: 'eggs', name: 'Яйца', is_required: true }],
+      },
+      {
+        recipe: tomatoSoupRecipe, canCook: true, matchPercent: 100,
+        matchedIngredients: [], missingIngredients: [],
       },
     ])
     renderApp('/pantry')
@@ -155,9 +155,33 @@ describe('App', () => {
     await user.click(screen.getByRole('button', { name: 'Найти рецепты →' }))
     const ready = await screen.findByRole('region', { name: 'Можно приготовить' })
     const close = screen.getByRole('region', { name: 'Почти подходит' })
+    expect(screen.getByRole('heading', { name: 'Что приготовить?' })).toHaveFocus()
     expect(within(ready).getByText('100% совпадения')).toBeInTheDocument()
     expect(within(close).getByText('Не хватает: Яйца')).toBeInTheDocument()
     await user.click(within(ready).getByRole('link', { name: 'Открыть рецепт →' }))
+    expect(screen.getByRole('heading', { name: 'Томатный суп' })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: '← К подбору рецептов' }))
+    expect(await screen.findByRole('button', { name: 'Томаты' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByRole('region', { name: 'Можно приготовить' })).toBeInTheDocument()
+  })
+
+  it('проходит путь с главной через подбор к рецепту и обратно', async () => {
+    const user = userEvent.setup()
+    mockedLoadRecipeMatches.mockResolvedValue([{
+      recipe: tomatoSoupRecipe,
+      canCook: true,
+      matchPercent: 100,
+      matchedIngredients: [{ id: 2, slug: 'tomato', name: 'Томаты', is_required: true }],
+      missingIngredients: [],
+    }])
+    renderApp('/')
+
+    await user.click(screen.getByRole('link', { name: /Приготовить из продуктов дома/ }))
+    await user.click(await screen.findByRole('button', { name: 'Томаты' }))
+    await user.click(screen.getByRole('button', { name: 'Найти рецепты →' }))
+    const results = await screen.findByRole('region', { name: 'Можно приготовить' })
+    await user.click(within(results).getByRole('link', { name: 'Открыть рецепт →' }))
+
     expect(screen.getByRole('heading', { name: 'Томатный суп' })).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: '← К подбору рецептов' }))
     expect(await screen.findByRole('button', { name: 'Томаты' })).toHaveAttribute('aria-pressed', 'true')
