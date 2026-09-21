@@ -15,6 +15,14 @@ from pathlib import Path
 
 import dj_database_url
 
+from .env import (
+    env_bool,
+    env_int,
+    env_list,
+    validate_production_database,
+    validate_production_settings,
+)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,16 +31,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-local-development-only")
+LOCAL_SECRET_KEY = "django-insecure-local-development-only"
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", LOCAL_SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+DEBUG = env_bool("DJANGO_DEBUG", True)
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = env_list(
+    "DJANGO_ALLOWED_HOSTS",
+    "localhost,127.0.0.1" if DEBUG else "",
+)
+
+validate_production_settings(
+    debug=DEBUG,
+    secret_key=SECRET_KEY,
+    local_secret_key=LOCAL_SECRET_KEY,
+    allowed_hosts=ALLOWED_HOSTS,
+)
 
 
 # Application definition
@@ -85,10 +100,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+IS_POSTGRESQL = DATABASE_URL.startswith(("postgres://", "postgresql://"))
+validate_production_database(debug=DEBUG, is_postgresql=IS_POSTGRESQL)
+
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
+    "default": dj_database_url.parse(
+        DATABASE_URL,
+        conn_max_age=env_int("DATABASE_CONN_MAX_AGE", 600),
+        conn_health_checks=True,
+        ssl_require=env_bool("DATABASE_SSL_REQUIRE", not DEBUG and IS_POSTGRESQL),
     )
 }
 
@@ -139,14 +160,23 @@ STORAGES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv(
-        "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173",
-    ).split(",")
-    if origin.strip()
-]
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173" if DEBUG else "",
+)
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = env_int("DJANGO_SECURE_HSTS_SECONDS", 0)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+        "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS",
+        False,
+    )
+    SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", False)
 
 REST_FRAMEWORK = {
     "DEFAULT_FILTER_BACKENDS": [

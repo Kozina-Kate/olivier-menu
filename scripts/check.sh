@@ -10,4 +10,4 @@ fi
 npm run check:frontend
 "$OLIVIER_PYTHON" backend/manage.py check
 "$OLIVIER_PYTHON" backend/manage.py makemigrations --check --dry-run
-"$OLIVIER_PYTHON" backend/manage.py test recipes
+"$OLIVIER_PYTHON" backend/manage.py test recipes config
